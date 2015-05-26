@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Microsoft.AspNet.Http;
+using System.Threading.Tasks;
 using Microsoft.AspNet.Http.Features;
 using Microsoft.Framework.Caching.Distributed;
 using Microsoft.Framework.Internal;
@@ -89,12 +89,13 @@ namespace Microsoft.AspNet.Session
             _store.Clear();
         }
 
-        // TODO: This should throw if called directly, but most other places it should fail silently (e.g. TryGetValue should just return null).
-        public void Load()
+        // TODO: This should throw if called directly, but most other places it should fail silently
+        // (e.g. TryGetValue should just return null).
+        public async Task LoadAsync()
         {
             if (!_loaded)
             {
-                var data = _cache.Get(_sessionId);
+                var data = await _cache.GetAsync(_sessionId);
                 if (data != null)
                 {
                     Deserialize(new MemoryStream(data));
@@ -107,11 +108,11 @@ namespace Microsoft.AspNet.Session
             }
         }
 
-        public void Commit()
+        public async Task CommitAsync()
         {
             if (_isModified)
             {
-                var data = _cache.Get(_sessionId);
+                var data = await _cache.GetAsync(_sessionId);
                 if (_logger.IsEnabled(LogLevel.Information) && data == null)
                 {
                     _logger.LogInformation("Session {0} started", _sessionId);
@@ -120,10 +121,18 @@ namespace Microsoft.AspNet.Session
 
                 var stream = new MemoryStream();
                 Serialize(stream);
-                _cache.Set(
+                await _cache.SetAsync(
                     _sessionId,
                     stream.ToArray(),
                     new DistributedCacheEntryOptions().SetSlidingExpiration(_idleTimeout));
+            }
+        }
+
+        private void Load()
+        {
+            if (!_loaded)
+            {
+                LoadAsync().GetAwaiter().GetResult();
             }
         }
 

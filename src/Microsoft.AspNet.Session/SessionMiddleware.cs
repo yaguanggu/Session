@@ -87,7 +87,7 @@ namespace Microsoft.AspNet.Session
                 {
                     try
                     {
-                        feature.Session.Commit();
+                        await feature.Session.CommitAsync();
                     }
                     catch (Exception ex)
                     {
